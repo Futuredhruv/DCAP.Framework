@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DCAP: Forensic Triage of Text-Based Evidence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .interactive-element { cursor: pointer; transition: all 0.2s; }
+        .interactive-element:hover { transform: translateY(-2px); }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin: 0 auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        .module-connector { height: 2px; background-color: #cbd5e1; flex-grow: 1; margin: 0 1rem; position: relative; top: 50%; }
+        .nav-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .hidden-content { display: none; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+    <!-- Chosen Palette: Forensic Blue & Slate (Professional, Trustworthy) -->
+    <!-- Application Structure Plan: 
+         1. Executive Summary: High-level problem/solution stats.
+         2. Pipeline Explorer: Interactive diagram of the 3 modules. Clicking a module reveals details.
+         3. Evidence Dashboard: Charts showing model performance and data reduction.
+         4. Interactive Triage: A simulated "tool" experience where users filter data.
+         5. Critical Analysis: Ethics, Limitations, Future Work in a grid.
+         This structure moves from "What is it?" to "How does it work?" to "Does it work?" to "Why does it matter?"
+    -->
+    <!-- Visualization & Content Choices:
+         - Intro Stats -> Goal: Inform -> Viz: Big Number Cards -> Interaction: None -> Justification: Immediate impact.
+         - Pipeline -> Goal: Explain Process -> Viz: Flowchart (HTML/Flex) -> Interaction: Click to expand details -> Justification: Shows end-to-end workflow.
+         - Performance -> Goal: Compare -> Viz: Bar/Radar Charts (Chart.js) -> Interaction: Toggle datasets -> Justification: Visual proof of 9-trait model superiority.
+         - Triage Demo -> Goal: Experience -> Viz: Simulated Table -> Interaction: Filter/Sort -> Justification: "Show, don't just tell" the utility.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-slate-800 tracking-tight">DCAP<span class="text-blue-600">.Framework</span></span>
+                </div>
+                <div class="hidden sm:flex space-x-8 items-center">
+                    <button onclick="switchTab('overview')" id="nav-overview" class="nav-item nav-active px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Overview</button>
+                    <button onclick="switchTab('pipeline')" id="nav-pipeline" class="nav-item px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">The Pipeline</button>
+                    <button onclick="switchTab('results')" id="nav-results" class="nav-item px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Results & Data</button>
+                    <button onclick="switchTab('discussion')" id="nav-discussion" class="nav-item px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Impact & Ethics</button>
+                </div>
+                <!-- Mobile menu button placeholder -->
+                <div class="flex items-center sm:hidden">
+                     <button class="p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none" onclick="toggleMobileMenu()">
+                        Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden sm:hidden bg-white border-t">
+            <div class="pt-2 pb-3 space-y-1 px-4">
+                 <button onclick="switchTab('overview')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Overview</button>
+                 <button onclick="switchTab('pipeline')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">The Pipeline</button>
+                 <button onclick="switchTab('results')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Results</button>
+                 <button onclick="switchTab('discussion')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Ethics</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- SECTION 1: OVERVIEW -->
+        <section id="overview" class="tab-content fade-in">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-extrabold text-slate-900 sm:text-5xl sm:tracking-tight lg:text-6xl">
+                    Forensic Triage of <span class="text-blue-600">Text-Based Evidence</span>
+                </h1>
+                <p class="mt-5 max-w-xl mx-auto text-xl text-slate-500">
+                    A Computational Framework for Quantifying Coercive Control Patterns in Massive Digital Datasets.
+                </p>
+            </div>
+
+            <!-- Key Problem/Solution Stats -->
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-12">
+                <div class="card p-6 text-center border-t-4 border-red-500">
+                    <div class="text-sm font-medium text-slate-500 uppercase">The Problem</div>
+                    <div class="mt-2 text-3xl font-bold text-slate-900">Data-to-Insight Gap</div>
+                    <p class="mt-2 text-sm text-slate-600">Manual review of thousands of messages is subjective, slow, and unscalable.</p>
+                </div>
+                <div class="card p-6 text-center border-t-4 border-blue-500">
+                    <div class="text-sm font-medium text-slate-500 uppercase">The Solution</div>
+                    <div class="mt-2 text-3xl font-bold text-slate-900">DCAP Pipeline</div>
+                    <p class="mt-2 text-sm text-slate-600">Automated ingestion, analysis, and triage of raw digital evidence.</p>
+                </div>
+                <div class="card p-6 text-center border-t-4 border-green-500">
+                    <div class="text-sm font-medium text-slate-500 uppercase">The Impact</div>
+                    <div class="mt-2 text-3xl font-bold text-slate-900">96.6%</div>
+                    <p class="mt-2 text-sm text-slate-600">Reduction in data volume requiring manual review in test cases.</p>
+                </div>
+            </div>
+
+            <!-- Context Block -->
+            <div class="bg-white rounded-lg shadow p-8">
+                <h3 class="text-lg font-semibold text-slate-900 mb-4">Context: The Challenge of Coercive Control</h3>
+                <p class="text-slate-600 mb-4">
+                    Coercive control is a pattern of incidents used to exert power. Unlike physical violence, its evidence lies in subtle, longitudinal linguistic patterns within thousands of text messages. Current forensic methods rely on manual review or analyzing police summaries (secondary sources), missing the granular "primary source" evidence.
+                </p>
+                <div class="flex items-center p-4 bg-blue-50 rounded-md border-l-4 border-blue-500">
+                    <span class="text-2xl mr-4">💡</span>
+                    <p class="text-sm text-blue-800">
+                        <strong>Innovation:</strong> This framework introduces a "Human-in-the-Loop" (HITL) approach, using a forensically-optimized 9-trait AI model to flag potential abuse, empowering investigators rather than replacing them.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: THE PIPELINE (Methodology) -->
+        <section id="pipeline" class="tab-content hidden-content fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">The Digital Conversation Analysis Pipeline (DCAP)</h2>
+                <p class="mt-2 text-slate-600">Explore the three modules of the framework. Click on a module to see how it works.</p>
+            </div>
+
+            <!-- Interactive Flowchart -->
+            <div class="flex flex-col md:flex-row justify-between items-stretch gap-4 mb-10">
+                <!-- Module 1 -->
+                <div onclick="showModuleDetail(1)" class="card interactive-element p-6 flex-1 border-l-4 border-indigo-500 cursor-pointer bg-indigo-50">
+                    <div class="text-indigo-600 font-bold mb-2">MODULE 1</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Ingestion & Structuring</h3>
+                    <p class="text-sm text-slate-600">Solves the "Ingestion Gap". Parses raw, messy files.</p>
+                </div>
+                
+                <!-- Connector -->
+                <div class="hidden md:flex items-center justify-center">
+                    <span class="text-slate-400 text-2xl">➔</span>
+                </div>
+
+                <!-- Module 2 -->
+                <div onclick="showModuleDetail(2)" class="card interactive-element p-6 flex-1 border-l-4 border-purple-500 cursor-pointer">
+                    <div class="text-purple-600 font-bold mb-2">MODULE 2</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Linguistic Analysis</h3>
+                    <p class="text-sm text-slate-600">Applies the 9-Trait Hybrid Classifier.</p>
+                </div>
+
+                <!-- Connector -->
+                <div class="hidden md:flex items-center justify-center">
+                    <span class="text-slate-400 text-2xl">➔</span>
+                </div>
+
+                <!-- Module 3 -->
+                <div onclick="showModuleDetail(3)" class="card interactive-element p-6 flex-1 border-l-4 border-teal-500 cursor-pointer">
+                    <div class="text-teal-600 font-bold mb-2">MODULE 3</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Triage Reporting</h3>
+                    <p class="text-sm text-slate-600">Solves the "Interpretability Gap". Generates the report.</p>
+                </div>
+            </div>
+
+            <!-- Dynamic Detail View -->
+            <div id="module-detail-view" class="card p-8 min-h-[300px] transition-all">
+                <!-- Content injected by JS -->
+                <div class="text-center text-slate-400 py-12">
+                    Select a module above to explore its methodology.
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: RESULTS & DATA -->
+        <section id="results" class="tab-content hidden-content fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">Validation & Case Study Results</h2>
+                <p class="mt-2 text-slate-600">Quantitative proof of model performance and pipeline utility.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                <!-- Chart 1: Model Performance -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">9-Trait Model Performance (Macro-Averaged)</h3>
+                    <p class="text-sm text-slate-600 mb-4">Validation on held-out test set. The hybrid model balances precision and recall.</p>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Speed Comparison -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Processing Efficiency (10k Messages)</h3>
+                    <p class="text-sm text-slate-600 mb-4">Comparison against previous 24-trait exploratory model.</p>
+                    <div class="chart-container">
+                        <canvas id="speedChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Triage Simulator -->
+            <div class="card p-8 bg-slate-800 text-slate-100">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-white">Simulated Triage Report (Case-001)</h3>
+                        <p class="text-slate-400 text-sm">Explore the output generated from 8,451 raw messages.</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold text-green-400">20.39%</div>
+                        <div class="text-xs text-slate-400 uppercase tracking-wider">PUI Flag Rate</div>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="flex gap-4 mb-6 overflow-x-auto pb-2">
+                    <button onclick="filterSim('all')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors filter-btn active-filter ring-2 ring-blue-500">All Traits</button>
+                    <button onclick="filterSim('entitlement')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors filter-btn">Entitlement (T5)</button>
+                    <button onclick="filterSim('empathy')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors filter-btn">Lack of Empathy (T7)</button>
+                    <button onclick="filterSim('arrogance')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors filter-btn">Arrogance (T9)</button>
+                </div>
+
+                <!-- Data Display -->
+                <div class="bg-slate-900 rounded-md p-4 font-mono text-sm h-64 overflow-y-auto border border-slate-700" id="sim-output">
+                    <!-- Content injected by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: DISCUSSION & ETHICS -->
+        <section id="discussion" class="tab-content hidden-content fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">Implications & Ethics</h2>
+                <p class="mt-2 text-slate-600">Why this framework matters for the future of forensic science.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Implications -->
+                <div class="card p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3">1</div>
+                        <h3 class="text-lg font-bold text-slate-800">Forensic Triage Tool</h3>
+                    </div>
+                    <p class="text-slate-600">
+                        Provides a "heatmap" of linguistic abuse, allowing units to prioritize high-risk cases (like the 20% flag rate in Case-001) over low-risk ones, optimizing resource allocation.
+                    </p>
+                </div>
+
+                <div class="card p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3">2</div>
+                        <h3 class="text-lg font-bold text-slate-800">Objective Evidence</h3>
+                    </div>
+                    <p class="text-slate-600">
+                        Moves beyond subjective "feeling" to quantifiable patterns. A prosecutor can present: "7.21% of messages showed Entitlement," providing a statistical backbone to the case.
+                    </p>
+                </div>
+
+                <!-- Ethics -->
+                <div class="card p-6 border-l-4 border-orange-500 md:col-span-2">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">Ethical & Legal Considerations</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-slate-700 mb-2">Not a Diagnostic Tool</h4>
+                            <p class="text-sm text-slate-600">
+                                DCAP detects <em>linguistic markers</em> aligned with DSM-5 traits, it does not diagnose NPD. It is a decision-support system, not a doctor.
+                            </p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-700 mb-2">Human-in-the-Loop (HITL)</h4>
+                            <p class="text-sm text-slate-600">
+                                To mitigate automation bias, the tool acts as a pointer. The human investigator must verify the flagged messages. The system ensures explainability (XAI) by linking every flag back to the source text.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Future Work -->
+                <div class="card p-6 md:col-span-2 bg-slate-800 text-white">
+                    <h3 class="text-lg font-bold mb-3">Future Work</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-300">
+                        <li><span class="text-white font-medium">Model Validation:</span> Partnering with clinical bodies for validation on real, anonymized case files.</li>
+                        <li><span class="text-white font-medium">Expanding Ingestion:</span> Support for .imessage, XML, and other forensic formats.</li>
+                        <li><span class="text-white font-medium">Visual Dashboard:</span> Developing a GUI to interactively explore the triage report timeline.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- STATE & DATA ---
+        const moduleData = {
+            1: {
+                title: "Module 1: Forensic Data Structuring Engine",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-indigo-600 mb-2">The Problem: Ingestion Gap</h4>
+                            <p class="text-sm text-slate-600 mb-4">Forensic investigators face heterogeneous, unstructured data (WhatsApp .txt, Messenger .json, PDF exports). Manual parsing is slow and error-prone.</p>
+                            <h4 class="font-bold text-indigo-600 mb-2">The Solution</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li><strong>Multi-Format Parsing:</strong> Auto-detects and parses .txt, .csv, .pdf, .doc, .json.</li>
+                                <li><strong>Standardization:</strong> Converts all inputs to a unified schema (ID, Timestamp, Sender, Content).</li>
+                                <li><strong>Robustness:</strong> Flags missing data as "NA" instead of crashing.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded border border-slate-200 font-mono text-xs">
+                            <div class="text-slate-400 mb-2">// Input: messy_chat.txt</div>
+                            <div class="text-red-500">[12/05/25, 10:30:15] Alex: You never listen</div>
+                            <div class="text-center my-2">⬇️</div>
+                            <div class="text-slate-400 mb-2">// Output: Structured_Data.csv</div>
+                            <div class="text-green-600">1 | 12-05-2025 10:30:15 | Alex | You never listen</div>
+                        </div>
+                    </div>
+                `
+            },
+            2: {
+                title: "Module 2: Linguistic Analysis Engine",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-purple-600 mb-2">The Engine: Hybrid Classifier</h4>
+                            <p class="text-sm text-slate-600 mb-4">A forensically-optimized model trained specifically on the 9 core DSM-5 traits of Narcissistic Personality Disorder.</p>
+                            <h4 class="font-bold text-purple-600 mb-2">Architecture</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li><strong>Regex Component:</strong> High precision. Catches explicit phrases.</li>
+                                <li><strong>BERT Component:</strong> High recall. Catches contextual nuance.</li>
+                                <li><strong>Optimized:</strong> 58.7% faster than previous 24-trait models.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded border border-slate-200 font-mono text-xs">
+                            <div class="text-slate-400 mb-2">// Processing Message ID: 235</div>
+                            <div class="mb-2">"You owe me for this, I'm not kidding."</div>
+                            <div class="border-t pt-2">
+                                <div class="flex justify-between"><span class="text-slate-500">T5 (Entitlement):</span> <span class="text-purple-600 font-bold">YES (Regex Match)</span></div>
+                                <div class="flex justify-between"><span class="text-slate-500">T7 (Lack Empathy):</span> <span class="text-slate-400">NO (0.04)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            3: {
+                title: "Module 3: Forensic Triage Report Generator",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-teal-600 mb-2">The Output: Actionable Intelligence</h4>
+                            <p class="text-sm text-slate-600 mb-4">Solves the "Interpretability Gap" by converting complex CSV data into a human-readable summary.</p>
+                            <h4 class="font-bold text-teal-600 mb-2">Key Features</h4>
+                            <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+                                <li><strong>Quantification:</strong> Calculates % of messages matching each trait.</li>
+                                <li><strong>Ranking:</strong> Sorts traits by prevalence (Heatmap approach).</li>
+                                <li><strong>Traceability:</strong> Every stat links back to specific message IDs for verification.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded border border-slate-200 font-mono text-xs">
+                            <div class="text-slate-400 mb-2">// Triage_Report.txt</div>
+                            <div class="mb-1">--- FORENSIC TRIAGE REPORT ---</div>
+                            <div class="mb-1">Subject: Alex (Sender_A)</div>
+                            <div class="mb-1">Flag Rate: 20.39%</div>
+                            <div class="mt-2 border-t pt-2">
+                                <div>1. Sense of Entitlement (T5): 287 msgs (7.21%)</div>
+                                <div>2. Lack of Empathy (T7): 241 msgs (6.05%)</div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+        };
+
+        const triageData = [
+            { trait: "Sense of Entitlement (T5)", count: 287, pct: "7.21%", example: "You should be glad I'm making time at all with my schedule." },
+            { trait: "Lack of Empathy (T7)", count: 241, pct: "6.05%", example: "I ruined the mood? By being upset that you stood me up? That's laughable." },
+            { trait: "Arrogant Behaviours (T9)", count: 155, pct: "3.89%", example: "Comparing your 'valuable afternoon' to me closing a six-figure deal is honestly laughable." },
+            { trait: "Interpersonally Exploitative (T6)", count: 64, pct: "1.61%", example: "I need you to cover the cost, it's only fair given what I do for you." },
+            { trait: "Needs Excessive Admiration (T4)", count: 31, pct: "0.78%", example: "Did you see how everyone looked at me when I walked in?" },
+            { trait: "Believes they are 'Special' (T3)", count: 15, pct: "0.38%", example: "Normal rules don't apply to people operating at my level." },
+            { trait: "Grandiose Self-Importance (T1)", count: 5, pct: "0.13%", example: "I am the only one holding this entire company together." }
+        ];
+
+        // --- NAVIGATION LOGIC ---
+        function switchTab(tabId) {
+            // Update Buttons
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                btn.classList.remove('nav-active');
+                if(btn.id === `nav-${tabId}`) btn.classList.add('nav-active');
+            });
+
+            // Update Content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden-content');
+            });
+            document.getElementById(tabId).classList.remove('hidden-content');
+
+            // Trigger Charts if Results tab
+            if (tabId === 'results') {
+                setTimeout(renderCharts, 100);
+                renderSim('all');
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- MODULE DETAIL LOGIC ---
+        function showModuleDetail(id) {
+            const container = document.getElementById('module-detail-view');
+            const data = moduleData[id];
+            
+            // Remove active state from others
+            document.querySelectorAll('.card.interactive-element').forEach(el => {
+                el.classList.remove('bg-indigo-50', 'bg-purple-50', 'bg-teal-50');
+            });
+            
+            // Add active state styling logic (simplified for vanilla JS)
+            // Just inject content
+            container.innerHTML = `
+                <div class="fade-in">
+                    <h3 class="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">${data.title}</h3>
+                    ${data.content}
+                </div>
+            `;
+        }
+
+        // --- CHARTS LOGIC (Chart.js) ---
+        let chartsRendered = false;
+        function renderCharts() {
+            if (chartsRendered) return;
+
+            // Performance Chart
+            const ctxPerf = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctxPerf, {
+                type: 'bar',
+                data: {
+                    labels: ['Precision', 'Recall', 'F1-Score'],
+                    datasets: [{
+                        label: '9-Trait Hybrid Model',
+                        data: [0.86, 0.83, 0.85],
+                        backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 1.0 }
+                    }
+                }
+            });
+
+            // Speed Chart
+            const ctxSpeed = document.getElementById('speedChart').getContext('2d');
+            new Chart(ctxSpeed, {
+                type: 'bar',
+                data: {
+                    labels: ['Old 24-Trait Model', 'New 9-Trait Model'],
+                    datasets: [{
+                        label: 'Processing Time (seconds)',
+                        data: [47.2, 19.5],
+                        backgroundColor: ['rgba(148, 163, 184, 0.7)', 'rgba(34, 197, 94, 0.7)'],
+                        borderColor: ['rgba(148, 163, 184, 1)', 'rgba(34, 197, 94, 1)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                footer: (items) => {
+                                    if (items[0].dataIndex === 1) return "58.7% Improvement";
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            chartsRendered = true;
+        }
+
+        // --- TRIAGE SIMULATOR LOGIC ---
+        function filterSim(filter) {
+            const container = document.getElementById('sim-output');
+            let html = '';
+
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-blue-500'));
+            event.target.classList.add('ring-2', 'ring-blue-500');
+
+            // Filter Data
+            const filtered = filter === 'all' 
+                ? triageData 
+                : triageData.filter(item => item.trait.toLowerCase().includes(filter));
+
+            if (filtered.length === 0) {
+                html = '<div class="text-slate-500 italic">No messages found for this filter.</div>';
+            } else {
+                filtered.forEach(item => {
+                    html += `
+                        <div class="mb-3 pb-3 border-b border-slate-800 last:border-0 fade-in">
+                            <div class="flex justify-between text-green-400 mb-1">
+                                <span class="font-bold">${item.trait}</span>
+                                <span>${item.count} msgs</span>
+                            </div>
+                            <div class="text-slate-300 italic">"${item.example}"</div>
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Initialize default view
+        // showModuleDetail(1); // Removed to let user click
+        // Initialize Detail view with prompt
+    </script>
+</body>
+</html>
